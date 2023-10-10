@@ -2,40 +2,48 @@
   <div>
     <!-- Modal -->
     <q-dialog v-model="fixed">
-      <q-card>
-        <q-card-section>
+      <q-card class="modal-content">
+        <q-card-section class="row items-center q-pb-none" style="color: black;">
           <div class="text-h6">{{ text }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
-
         <q-separator />
 
-        <q-card-section style="max-height: 50vh; width:200px "  class="scroll">
-          <q-input v-model="nuevaPlaca" label="Placa" />
-          <q-input v-model="nuevoNumeroBus" label="Número de Bus" />
-          <q-input v-model="nuevaCantidadAsientos" label="Cantidad de Asientos" />
-          <q-input v-model="nuevaEmpresaAsignada" label="Empresa Asignada" />
+        <q-card-section style="max-height: 50vh" class="scroll">
+          <q-input v-model="placa" label="Placa" style="width: 300px;" v-if="cambio == 0" />
+          <q-input v-model="numero_bus" label="Número de Bus" style="width: 300px;" v-if="cambio == 0" />
+          <q-input v-model="cantidad_asientos" label="Cantidad de Asientos" style="width: 300px;" />
+          <q-input v-model="empresa_asignada" label="Empresa Asignada" style="width: 300px;" />
         </q-card-section>
 
         <q-separator />
 
         <q-card-actions align="right">
           <q-btn flat label="Cerrar" color="primary" v-close-popup />
-          <q-btn flat label="Guardar 💾" color="primary" @click="guardarBus()" />
+          <q-btn flat label="Guardar 💾" color="primary" @click="editarAgregarBus()" />
         </q-card-actions>
       </q-card>
     </q-dialog>
     <div>
-    <h1>Buses</h1>
-      <q-btn color="secondary" label="Agregar" @click="agregarBus()" />
-        <q-table title="Buses" :rows="rows" :columns="columns" row-key="name">
-          <template v-slot:body-cell-botones="props">
-            <q-td :props="props">
-              <q-btn color="primary" label="Editar" @click="EditarBus(props.row._id)" />
-              <q-btn color="negative" label="Borrar" @click="borrarBus(props.row._id)" />
-              <q-btn color="amber" glossy :label="habilitar"  @click="InactivarBus(props.row._id)" />
-            </q-td>
-          </template>
-        </q-table>
+      <h1>Buses</h1>
+      <div class="btn-agregar">
+        <q-btn color="secondary" label="Agregar" @click="agregarBus()" />
+      </div>
+      <q-table title="Buses" :rows="rows" :columns="columns" row-key="name">
+        <template v-slot:body-cell-botones="props">
+          <q-td :props="props" class="botones">
+            <q-btn color="white" text-color="black" label="🖋️" @click="EditarBus(props.row._id)" />
+            <q-btn color="amber" glossy label="❌" @click="InactivarBus(props.row._id)" v-if="props.row.estado == 1" />
+            <q-btn color="amber" glossy label="✅" @click="InactivarBus(props.row._id)" v-else />
+          </q-td>
+        </template>
+      </q-table>
+      <div class="volver">
+        <q-btn color="black"><router-link to="/">Volver</router-link></q-btn>
+
+      </div>
+
     </div>
   </div>
 </template>
@@ -45,19 +53,20 @@ import axios from 'axios';
 import { ref, onMounted } from 'vue';
 import { format } from 'date-fns';
 
-let apiUrl = 'https://transporte-czaa.onrender.com/api/bus/buses';
 let buses = ref([]);
 let rows = ref([]);
-
 let fixed = ref(false)
-
-let habilitar = ref('Inactivar')
-
+let text = ref('')
+let placa = ref('');
+let numero_bus = ref('');
+let cantidad_asientos = ref('');
+let empresa_asignada = ref('');
+let cambio = ref(0)
 async function obtenerInfo() {
   try {
-    const responseBuses = await axios.get(apiUrl);
-    buses.value = responseBuses.data.buses; 
-    rows.value = responseBuses.data.buses; 
+    const responseBuses = await axios.get('bus/buses');
+    buses.value = responseBuses.data.buses;
+    rows.value = responseBuses.data.buses;
   } catch (error) {
     console.error('Error al obtener la información de los buses:', error);
   }
@@ -68,55 +77,87 @@ const columns = [
   { name: 'numero_bus', label: 'Número de Bus', field: 'numero_bus', sortable: true },
   { name: 'cantidad_asientos', label: 'Cantidad de Asientos', field: 'cantidad_asientos' },
   { name: 'empresa_asignada', label: 'Empresa Asignada', field: 'empresa_asignada' },
-  { name: 'estado', label: 'Estado', field: 'estado', format: (val) => (val ? 'Activo' : 'Inactivo') },
-  { name: 'createAT', label: 'Fecha de Creación', field: 'createAT', sortable: true,
+  { name: 'estado', label: 'Estado', field: 'estado', sortable: true, format: (val) => (val ? 'Activo' : 'Inactivo') },
+  {
+    name: 'createAT', label: 'Fecha de Creación', field: 'createAT', sortable: true,
     format: (val) => format(new Date(val), 'yyyy-MM-dd')
   },
-  { name: 'botones', label: 'Opciones',
-    field: row => null, 
-    format: (val, row) => {
-      return `
-        <q-btn color="primary" label="Editar" @click="editarBus('${row._id}')" />
-        <q-btn color="negative" label="Borrar" @click="borrarBus('${row._id}')" />
-        <q-btn color="amber" glossy :label="Inactivar"  @click="InactivarBus('${row._id}'/>`;
-    },
-    "sortable": false, 
+  {
+    name: 'botones', label: 'Opciones',
+    field: row => null,
+    "sortable": false,
   },
 ];
-let text = ref('')
-let nuevaPlaca = ref('');
-let nuevoNumeroBus = ref('');
-let nuevaCantidadAsientos = ref('');
-let nuevaEmpresaAsignada = ref('');
+
 
 function agregarBus() {
   fixed.value = true;
   text.value = "Agregar Bus";
-  nuevaPlaca.value = ''; 
-  nuevoNumeroBus.value = ''; 
-  nuevaCantidadAsientos.value = ''; 
-  nuevaEmpresaAsignada.value = ''; 
+  cambio.value = 0
 }
 
+async function editarAgregarBus() {
+  if (cambio = 0) {
+    const data = {
+      placa: placa.value,
+      numero_bus: numero_bus.value,
+      cantidad_asientos: cantidad_asientos.value,
+      empresa_asignada: empresa_asignada.value,
+    }
+    try {
+      let res = await axios.post("bus/bus/agregar", data)
+      console.log(res);
+      limpiar()
+    } catch (error) {
+      console.log(error);
+    }
+  }else{
+    const data = {
+      cantidad_asientos: cantidad_asientos.value,
+      empresa_asignada: empresa_asignada.value,
+    }
+    try {
+      let r = axios.put(`bus/bus/${id}`, data)
+      console.log(r);
+      // limpiar()
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  obtenerInfo()
+}
+
+
+
+
+
+
+function limpiar() {
+  placa.value = ""
+  numero_bus.value = ""
+  cantidad_asientos = ""
+  empresa_asignada = ""
+}
+
+
 function EditarBus(id) {
+  cambio.value = 1
   const busSeleccionado = buses.value.find((bus) => bus._id === id);
   if (busSeleccionado) {
     fixed.value = true;
     text.value = "Editar Bus";
-    nuevaPlaca.value = busSeleccionado.placa;
-    nuevoNumeroBus.value = busSeleccionado.numero_bus;
-    nuevaCantidadAsientos.value = busSeleccionado.cantidad_asientos;
-    nuevaEmpresaAsignada.value = busSeleccionado.empresa_asignada;
+    placa.value = busSeleccionado.placa;
+    cantidad_asientos.value = busSeleccionado.cantidad_asientos;
+    empresa_asignada.value = busSeleccionado.empresa_asignada;
   }
 }
 
-function InactivarBus(id){
-  try {
-    habilitar.value = "Activar"
-  } catch (error) {
-    console.log(error,"Error al cambiar el estado del bus");
-  }
-}
+// function InactivarBus(id) {
+//   try {
+//   } catch (error) {
+//     console.log(error, "Error al cambiar el estado del bus");
+//   }
+// }
 
 onMounted(() => {
   obtenerInfo();
@@ -124,5 +165,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Estilos personalizados si es necesario */
+.modal-content {
+  width: 400px;
+}
+
+.botones button {
+  margin: 2px;
+}
+
+.btn-agregar {
+  width: 100%;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: flex-end
+}
+
+.volver {
+  width: 100%;
+  margin-top: 5px;
+}
 </style>

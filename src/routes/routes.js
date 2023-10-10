@@ -1,10 +1,12 @@
 import Buses from "../components/Buses.vue"
+import Main from "../components/Main.vue"
 
 
 import {createRouter, createWebHashHistory} from 'vue-router'
 
 const routes = [
-    {path: "/buses", component:Buses},
+    {path: "/", component:Main},
+    {path: "/buses", component:Buses}
 ]
 
 export const router = createRouter({

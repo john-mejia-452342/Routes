@@ -35,7 +35,7 @@
           <q-td :props="props" class="botones">
             <q-btn color="white" text-color="black" label="🖋️" @click="EditarBus(props.row._id)" />
             <q-btn color="amber" glossy label="❌" @click="InactivarBus(props.row._id)" v-if="props.row.estado == 1" />
-            <q-btn color="amber" glossy label="✅" @click="InactivarBus(props.row._id)" v-else />
+            <q-btn color="amber" glossy label="✅" @click="ActivarBus(props.row._id)" v-else />
           </q-td>
         </template>
       </q-table>
@@ -58,10 +58,11 @@ let rows = ref([]);
 let fixed = ref(false)
 let text = ref('')
 let placa = ref('');
-let numero_bus = ref('');
+let numero_bus = ref();
 let cantidad_asientos = ref('');
 let empresa_asignada = ref('');
 let cambio = ref(0)
+
 async function obtenerInfo() {
   try {
     const responseBuses = await axios.get('bus/buses');
@@ -89,7 +90,6 @@ const columns = [
   },
 ];
 
-
 function agregarBus() {
   fixed.value = true;
   text.value = "Agregar Bus";
@@ -97,40 +97,41 @@ function agregarBus() {
 }
 
 async function editarAgregarBus() {
-  if (cambio = 0) {
+  if (cambio.value === 0) {
     const data = {
       placa: placa.value,
       numero_bus: numero_bus.value,
       cantidad_asientos: cantidad_asientos.value,
       empresa_asignada: empresa_asignada.value,
-    }
+    };
+
     try {
-      let res = await axios.post("bus/bus/agregar", data)
+      let res = await axios.post("bus/bus/agregar", data);
       console.log(res);
-      limpiar()
+      limpiar();
+      obtenerInfo();
     } catch (error) {
       console.log(error);
     }
-  }else{
-    const data = {
-      cantidad_asientos: cantidad_asientos.value,
-      empresa_asignada: empresa_asignada.value,
-    }
-    try {
-      let r = axios.put(`bus/bus/${id}`, data)
-      console.log(r);
-      // limpiar()
-    } catch (error) {
-      console.log(error);
+  } else {
+    let id = idBus.value
+    if (id) {
+      const data = {
+        cantidad_asientos: cantidad_asientos.value,
+        empresa_asignada: empresa_asignada.value,
+      };
+      try {
+        let r = await axios.put(`bus/bus/${id}`, data);
+        console.log(r);
+        obtenerInfo();
+        limpiar();
+        fixed.value = false;
+      } catch (error) {
+        console.log(error);
+      }
     }
   }
-  obtenerInfo()
 }
-
-
-
-
-
 
 function limpiar() {
   placa.value = ""
@@ -139,25 +140,38 @@ function limpiar() {
   empresa_asignada = ""
 }
 
-
-function EditarBus(id) {
-  cambio.value = 1
+let idBus = ref('')
+async function EditarBus(id) {
+  cambio.value = 1;
   const busSeleccionado = buses.value.find((bus) => bus._id === id);
   if (busSeleccionado) {
+    idBus.value = String(busSeleccionado._id); 
     fixed.value = true;
     text.value = "Editar Bus";
-    placa.value = busSeleccionado.placa;
     cantidad_asientos.value = busSeleccionado.cantidad_asientos;
     empresa_asignada.value = busSeleccionado.empresa_asignada;
   }
 }
 
-// function InactivarBus(id) {
-//   try {
-//   } catch (error) {
-//     console.log(error, "Error al cambiar el estado del bus");
-//   }
-// }
+async function InactivarBus(id) {
+  try {
+    let r = await axios.put(`bus/inactivarBus/${id}`)
+    console.log(r);
+  } catch (error) {
+    console.log(error, "Error al cambiar el estado del bus");
+  }
+  obtenerInfo();
+}
+
+async function ActivarBus(id){
+  try {
+    let r = await axios.put(`bus/activarBus/${id}`)
+    console.log(r);
+  } catch (error) {
+    console.log(error, "Error al cambiar el estado del bus");
+  }
+  obtenerInfo();
+}
 
 onMounted(() => {
   obtenerInfo();
